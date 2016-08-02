@@ -1,0 +1,128 @@
+<div id="progress" layout-fill layout="row" layout-align="center center" ng-class="screenState" class="disable-select">
+    <md-progress-circular md-mode="indeterminate"></md-progress-circular>
+</div>
+<div id="main" flex layout="row" ng-class="screenState" class="disable-select">
+    <div id="title" layout="column" flex ng-if="titleShown">
+        <div class="title-background" flex layout="column" layout-align="center center"
+            ng-style="{'background-image':'url('+settings.landingPageBackground+')'}">
+            <div class="title" ng-bind-html="settings.pageTitle"></div>
+            <div class="subtitle" ng-bind-html="settings.pageSubtitle"></div>
+            <div class="title-buttons">
+                <div style="margin-bottom:20px;">
+                    <md-button class="md-raised start-button" ng-click="start()">Start</md-button>
+                </div>
+                <md-button ng-click="showCredits()" style="vertical-align: top;">Credits</md-button>
+                <md-button href="http://whatismycarbonfootprint.com" target="_blank">Want to create your own calculator?</md-button>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-button prev" ng-click="doPrevStep();" ng-hide="selectedActivityGroup.arrayId == 0"></div>
+    <div class="nav-button next"
+         ng-click="selectedActivityGroup.arrayId < activityGroups.length - 1 ? doNextStep() : seeFullResults()"
+         ng-show="(selectedActivityGroup.arrayId != activityGroups.length - 1 && activityGroups[selectedActivityGroup.arrayId + 1].completed) || (selectedActivityGroup.arrayId == activityGroups.length - 1 && completedGroupsCount == activityGroups.length)"></div>
+    <div layout="column"
+         class="card-column"
+         ng-hide="screenState == 'initializing' || (isPhonePortrait && !(activityGroup.selected || (activityGroup.arrayId < activityGroups.length - 1 && activityGroups[activityGroup.arrayId + 1].selected) || (activityGroup.arrayId > 0 && activityGroups[activityGroup.arrayId - 1].selected)))"
+         ng-class="{ {{activityGroup.type}}:true, selected: activityGroup.selected, completed: activityGroup.completed }"
+         ng-repeat="activityGroup in activityGroups"
+         ng-click="selectActivityGroup(activityGroup)"
+         ng-style="{
+                   transform: 'translate3d(' + activityGroup.left + 'px, 0, 0)',
+                   color:activityGroup.colortitle
+                   }"
+         >
+        <div class="mask" ng-if="!isPhonePortrait"></div>
+        <div class="heading">
+            <i class="material-icons">{{activityGroup.icon}}</i>
+            <div>{{activityGroup.desc}}</div>
+        </div>
+        <div layout-padding class="card {{activity.fontsize}}"
+             ng-style="{height: activity.footprint * settings.unitHeight + 'px', 
+                       'background-color': activity.footprint != 0 ? (activity.selected ? activityGroup.colorselected : activityGroup.colorbox) : 'white', 
+                       'border-color': activity.footprint == 0 ? activityGroup.colorbox : 'white',
+                       'color': activity.footprint == 0 ? activityGroup.colorbox : 'white'}" 
+             ng-class="{selected: activity.selected, zero:activity.footprint == 0}" 
+             layout layout-align="center center" 
+             ng-repeat="activity in activityGroup.activities" 
+             ng-click="selectActivity(activity, activityGroup);$event.stopPropagation();">
+            {{activity.desc}}
+        </div>
+        <div class="footer">
+            <i class="material-icons" ng-show="activityGroup.completed">check_circle</i>
+			<a ng-href="{{activityGroup.source}}" ng-style="{color:activityGroup.colortitle}" target="_blank">LEARN MORE</a>
+        </div>
+    </div>
+    <div class="results-mask" ng-click="hidePartialResults()"></div>
+    <div id="results"
+         layout="column"
+         layout-align="end"
+         ng-hide="screenState == 'initializing'"
+         class="card-column"
+         ng-click="isPhonePortrait && screenState == 'calculating' ? seePartialResults() : seeFullResults()"
+         ng-style="{
+                   transform: 'translate3d(' + resultLeft + 'px, 0, 0)'
+                   }">
+        <div class="result-background" ng-style="{'background-image':'url('+settings.resultsPageBackground+')'}"></div>
+        <div layout="row" class="result-button-container">
+            <div layout="row" flex layout-align="start start">
+                <md-button class="md-raised" ng-click="backToCalculation(); $event.stopPropagation();" ng-show="screenState == 'results' && !takingScreenshot" style="position:absolute;top:0px;left:0px;opacity:0.8;">Back</md-button>
+            </div>
+            <div layout="row" flex layout-align="end start" style="position:absolute;top:0px;right:0px;">
+                <md-button class="md-raised md-primary" ng-click="seeFullResults()" ng-if="!isPhonePortrait" ng-show="screenState == 'calculating' && completedGroupsCount == activityGroups.length">Done!</md-button>
+            </div>
+        </div>
+        <div layout="row" style="max-height:100%;">
+            <div layout="column" class="result-card-container">
+                <div flex></div>
+                <div layout layout-align="center center" style="color:white;">
+                    <div class="totalFootprint">{{totalFootprint}}</div><div class="totalFootprintDesc"> tonnes of CO<sub>2</sub> per year</div>
+                </div>
+                <div layout="column">
+                    <div layout-padding class="card result {{activity.fontsize}}" 
+                         ng-style="{height: activity.footprint * settings.unitHeight + 'px', 'background-color':activity.colorbox}"
+                         layout layout-align="center center" 
+                         ng-class="{zero: activity.footprint == 0}"
+                         ng-repeat="activity in selectedActivities">
+                        <span ng-if="!isPhonePortrait">{{activity.desc}}</span>
+                        <span ng-if="isPhonePortrait">{{activity.type}}</span>
+                    </div>
+                </div>
+            </div>
+            <div layout="column" flex ng-if="screenState == 'results'">
+                <div flex layout="column" layout-padding class="wrapper">
+                    <div ng-show="totalFootprint > result.lowerboundary && totalFootprint <= result.upperboundary" ng-repeat="result in resultInterpretation">
+                        <div class="title">{{result.heading}}</div>
+                        <div class="subtitle"><span ng-show="userFullName">{{userFullName}}, </span><span style="font-weight:400;">{{result.message}}</span></div>
+                        <div id="buttonWrapper" style="z-index: 2100;">
+                            <md-button id="fbShareBtn" class="md-raised md-primary" ng-show="!takingScreenshot && settings['facebookAppId']" ng-click="shareResults($event)">
+                                <span ng-if="!isPhonePortrait">Share on facebook</span>
+                                <span ng-if="isPhonePortrait">Share</span>
+                            </md-button>
+                            <md-button ng-show="settings.linkToPledge && !takingScreenshot" id="pledgeBtn" class="md-raised md-primary" ng-href="{{settings.linkToPledge}}" target="_blank">
+                                <span ng-if="!isPhonePortrait">How can I improve?</span>
+                                <span ng-if="isPhonePortrait">Learn</span>
+                            </md-button>
+                        </div>
+                    </div>
+                </div>
+                <div layout="row" class="baseline-wrapper" style="z-index: 2000;">
+                    <div class="baseline" layout="column" style="margin-left:10px;" ng-repeat="baseline in baselines">
+                        <div flex></div>
+                        <div>
+                            <div class="totalFootprint">
+                                <div class="baseline-total-footprint-amount">{{baseline.footprint}}<span class="totalFootprintDesc"> tonnes of CO<sub>2</sub> per year</span></div>
+                                <div class="mobile-baseline-desc">{{baseline.desc}}</div>
+                            </div>
+                        </div>
+                        <div layout="column">
+                            <div layout-padding class="card result baseline-card" ng-style="{height: baseline.footprint * settings.unitHeight + 'px', 'background-color': baseline.chartcolor, 'color': baseline.textcolor}" layout layout-align="center center">
+                                {{baseline.desc}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
